@@ -4,6 +4,8 @@ using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 
 const string basePage = @"https://clubeconomy.com.mk";
+Console.Write("Enter a valid file path [ex: c:/users/test/desktop/test.xlsx]:");
+
 string filePath = Console.ReadLine().Trim().Replace("/", @"\");
 int pageNumber = 1;
 bool nextExists = true;
@@ -21,8 +23,9 @@ while (nextExists)
 
     if (nextExists)
     {
+        Console.WriteLine($"Processing page: {pageNumber}");
         ProcessPage(companiesListPage?.DocumentNode.SelectNodes("//h2/a[@target='_blank']"), ref pageLists);
-        Console.WriteLine($"page: {pageNumber}");
+        Console.WriteLine($"Finished page: {pageNumber}");
     }
     pageNumber++;
 }
@@ -38,10 +41,10 @@ static void WriteToExcel(string filePath, ref List<List<string>> pageLists)
 
         for (int i = 0; i < pageLists.Count; i++)
         {
-            var row = worksheet.CreateRow(i + 1);
+            var row = worksheet.CreateRow(i);
             for (int j = 0; j < pageLists[i].Count; j++)
             {
-                row.CreateCell(j + 1).SetCellValue(pageLists[i][j].ToString());
+                row.CreateCell(j).SetCellValue(pageLists[i][j].ToString());
             }
         }
         NormalizeColumnSize(worksheet);
@@ -54,6 +57,9 @@ static void ProcessPage(HtmlNodeCollection? nodes, ref List<List<string>> pageLi
 {
     try
     {
+        if (nodes == null || nodes.Count == 0)
+            return;
+
         foreach (var node in nodes)
         {
             var companyTitle = node.InnerText;
@@ -62,17 +68,20 @@ static void ProcessPage(HtmlNodeCollection? nodes, ref List<List<string>> pageLi
             var businessPage = web.Load(basePage + url);
 
             var businessPageNodes = businessPage.DocumentNode.SelectNodes(@"//div[@class='media-body']//a[@target='_blank']");
+            if (businessPageNodes == null)
+            {
+                continue;
+            }
 
             var singleCompanyList = new List<string> { companyTitle };
             foreach (var n in businessPageNodes)
             {
-                var value = n?.Attributes["href"].Value
+                var value = n.Attributes["href"].Value
                     .Trim()
                     .Replace("mailto:", "")
                     .Replace("tel:", "");
 
                 singleCompanyList.Add(value);
-                Console.WriteLine($"{value}");
             }
             pageLists.Add(singleCompanyList);
         }
