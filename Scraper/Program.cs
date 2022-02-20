@@ -17,11 +17,13 @@ while (nextExists)
             web
             .Load(basePage + "/BusinessAddressBook?pagenumber=" + pageNumber.ToString());
 
-    ProcessPage(companiesListPage?.DocumentNode.SelectNodes("//h2/a[@target='_blank']"), ref pageLists);
+    nextExists = companiesListPage?.DocumentNode.SelectSingleNode(@"//div[@class='no-result']") == null;
 
-    nextExists = false;
-    //nextExists = companiesListPage.DocumentNode.SelectSingleNode(@"//div[@class='no-result']") == null;
-
+    if (nextExists)
+    {
+        ProcessPage(companiesListPage?.DocumentNode.SelectNodes("//h2/a[@target='_blank']"), ref pageLists);
+        Console.WriteLine($"page: {pageNumber}");
+    }
     pageNumber++;
 }
 
@@ -32,16 +34,14 @@ static void WriteToExcel(string filePath, ref List<List<string>> pageLists)
     using (var fs = new FileStream(filePath, FileMode.Create, FileAccess.Write))
     {
         IWorkbook workbook = new XSSFWorkbook();
-
         ISheet worksheet = workbook.CreateSheet("Sheet1");
-        
 
         for (int i = 0; i < pageLists.Count; i++)
         {
-            var row = worksheet.CreateRow(i+1);
+            var row = worksheet.CreateRow(i + 1);
             for (int j = 0; j < pageLists[i].Count; j++)
             {
-                row.CreateCell(j).SetCellValue(pageLists[i][j].ToString());
+                row.CreateCell(j + 1).SetCellValue(pageLists[i][j].ToString());
             }
         }
         NormalizeColumnSize(worksheet);
@@ -52,33 +52,40 @@ static void WriteToExcel(string filePath, ref List<List<string>> pageLists)
 
 static void ProcessPage(HtmlNodeCollection? nodes, ref List<List<string>> pageLists)
 {
-    foreach (var node in nodes)
+    try
     {
-        var companyTitle = node.InnerText;
-        var url = node.Attributes["href"].Value;
-        HtmlWeb web = new HtmlWeb();
-        var businessPage = web.Load(basePage + url);
-
-        var businessPageNodes = businessPage.DocumentNode.SelectNodes(@"//div[@class='media-body']//a[@target='_blank']");
-
-        var singleCompanyList = new List<string> { companyTitle };
-        foreach (var n in businessPageNodes)
+        foreach (var node in nodes)
         {
-            var value = n.Attributes["href"].Value
-                .Trim()
-                .Replace("mailto:", "")
-                .Replace("tel:", "");
+            var companyTitle = node.InnerText;
+            var url = node.Attributes["href"].Value;
+            HtmlWeb web = new HtmlWeb();
+            var businessPage = web.Load(basePage + url);
 
-            singleCompanyList.Add(value);
-            Console.WriteLine(value);
+            var businessPageNodes = businessPage.DocumentNode.SelectNodes(@"//div[@class='media-body']//a[@target='_blank']");
+
+            var singleCompanyList = new List<string> { companyTitle };
+            foreach (var n in businessPageNodes)
+            {
+                var value = n?.Attributes["href"].Value
+                    .Trim()
+                    .Replace("mailto:", "")
+                    .Replace("tel:", "");
+
+                singleCompanyList.Add(value);
+                Console.WriteLine($"{value}");
+            }
+            pageLists.Add(singleCompanyList);
         }
-        pageLists.Add(singleCompanyList);
+    }
+    catch (Exception e)
+    {
+        Console.WriteLine(e.Message);
     }
 }
 
 static void NormalizeColumnSize(ISheet sheet)
 {
-    for(int i = 0; i < 50; i++)
+    for (int i = 0; i < 50; i++)
     {
         sheet.AutoSizeColumn(i);
     }
