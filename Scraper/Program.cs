@@ -10,7 +10,7 @@ Console.Write("Enter a valid file path [ex: c:/users/test/desktop/test.xlsx]:");
 
 string filePath = Console.ReadLine().Trim().Replace("/", @"\");
 Console.WriteLine("Enter a city to filter by: ");
-var citySearchTerm = Console.ReadLine();
+var citySearchTerms = Console.ReadLine().Split(',');
 
 int pageNumber = 1;
 bool nextExists = true;
@@ -29,7 +29,7 @@ while (nextExists | pageNumber < 100)
     if (nextExists)
     {
         Console.WriteLine($"Processing page: {pageNumber}");
-        ProcessPage(companiesListPage?.DocumentNode.SelectNodes("//h2/a[@target='_blank']"), ref pageLists, citySearchTerm);
+        ProcessPage(companiesListPage?.DocumentNode.SelectNodes("//h2/a[@target='_blank']"), ref pageLists, citySearchTerms);
         Console.WriteLine($"Finished page: {pageNumber}");
     }
     pageNumber++;
@@ -58,7 +58,7 @@ static void WriteToExcel(string filePath, ref List<List<string>> pageLists)
     }
 }
 
-static void ProcessPage(HtmlNodeCollection? nodes, ref List<List<string>> pageLists, string citySearchTerm)
+static void ProcessPage(HtmlNodeCollection? nodes, ref List<List<string>> pageLists, string[] citySearchTerms)
 {
     try
     {
@@ -74,7 +74,7 @@ static void ProcessPage(HtmlNodeCollection? nodes, ref List<List<string>> pageLi
 
             var businessPageNodes =  businessPage.DocumentNode.SelectNodes(@"//div[@class='media-body']//a[@target='_blank']");
 
-            if (businessPageNodes == null || !IsInCity(businessPage.DocumentNode, citySearchTerm))
+            if (businessPageNodes == null || !IsInCity(businessPage.DocumentNode, citySearchTerms))
             {
                 continue;
             }
@@ -108,11 +108,11 @@ static string GetCompanyAddress(HtmlNode node)
             
 }
 
-static bool IsInCity(HtmlNode node, string city)
+static bool IsInCity(HtmlNode node, string[] cities)
 {
     var cityName = node.SelectSingleNode(@"//div[@class='media-body'][1]//strong//following-sibling::text()[2]").InnerText;
 
-    if(cityName.Trim().ToLower().StartsWith(city.Trim().ToLower()))
+    if(cities.Any(city => city.Trim().ToLower().StartsWith(cityName)))
         return true;
     return false;
 }
