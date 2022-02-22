@@ -17,7 +17,7 @@ bool nextExists = true;
 
 List<List<string>> pageLists = new List<List<string>>();
 
-while (nextExists | pageNumber < 100)
+while (nextExists || pageNumber < 100)
 {
     HtmlWeb web = new HtmlWeb();
     var companiesListPage =
