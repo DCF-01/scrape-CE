@@ -4,23 +4,13 @@ using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 
 const string basePage = @"https://clubeconomy.com.mk";
+
+Console.InputEncoding = System.Text.Encoding.Unicode;
 Console.Write("Enter a valid file path [ex: c:/users/test/desktop/test.xlsx]:");
 
 string filePath = Console.ReadLine().Trim().Replace("/", @"\");
-
-ConsoleKey response;
-do
-{
-    Console.WriteLine("Only search local companies?");
-    response = Console.ReadKey(false).Key;
-    if(response != ConsoleKey.Enter)
-        Console.WriteLine();
-
-} while(response != ConsoleKey.Y && response != ConsoleKey.N);
-
-bool onlyLocalCompanies = false;
-
-onlyLocalCompanies = response == ConsoleKey.Y;
+Console.WriteLine("Enter a city to filter by: ");
+var citySearchTerm = Console.ReadLine();
 
 int pageNumber = 1;
 bool nextExists = true;
@@ -39,7 +29,7 @@ while (nextExists | pageNumber < 100)
     if (nextExists)
     {
         Console.WriteLine($"Processing page: {pageNumber}");
-        ProcessPage(companiesListPage?.DocumentNode.SelectNodes("//h2/a[@target='_blank']"), ref pageLists, onlyLocalCompanies);
+        ProcessPage(companiesListPage?.DocumentNode.SelectNodes("//h2/a[@target='_blank']"), ref pageLists, citySearchTerm);
         Console.WriteLine($"Finished page: {pageNumber}");
     }
     pageNumber++;
@@ -68,7 +58,7 @@ static void WriteToExcel(string filePath, ref List<List<string>> pageLists)
     }
 }
 
-static void ProcessPage(HtmlNodeCollection? nodes, ref List<List<string>> pageLists, bool onlyLocalCompanies)
+static void ProcessPage(HtmlNodeCollection? nodes, ref List<List<string>> pageLists, string citySearchTerm)
 {
     try
     {
@@ -84,12 +74,7 @@ static void ProcessPage(HtmlNodeCollection? nodes, ref List<List<string>> pageLi
 
             var businessPageNodes =  businessPage.DocumentNode.SelectNodes(@"//div[@class='media-body']//a[@target='_blank']");
 
-            bool filtersFail = false;
-
-            if(onlyLocalCompanies)
-                filtersFail = !IsLocalCompany(businessPage.DocumentNode);
-
-            if (businessPageNodes == null || filtersFail)
+            if (businessPageNodes == null || !IsInCity(businessPage.DocumentNode, citySearchTerm))
             {
                 continue;
             }
@@ -123,11 +108,11 @@ static string GetCompanyAddress(HtmlNode node)
             
 }
 
-static bool IsLocalCompany(HtmlNode node)
+static bool IsInCity(HtmlNode node, string city)
 {
     var cityName = node.SelectSingleNode(@"//div[@class='media-body'][1]//strong//following-sibling::text()[2]").InnerText;
 
-    if(cityName.Trim().ToLower().StartsWith("скопје"))
+    if(cityName.Trim().ToLower().StartsWith(city.Trim().ToLower()))
         return true;
     return false;
 }
