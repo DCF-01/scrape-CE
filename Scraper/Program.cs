@@ -7,12 +7,27 @@ const string basePage = @"https://clubeconomy.com.mk";
 Console.Write("Enter a valid file path [ex: c:/users/test/desktop/test.xlsx]:");
 
 string filePath = Console.ReadLine().Trim().Replace("/", @"\");
+
+ConsoleKey response;
+do
+{
+    Console.WriteLine("Only search local companies?");
+    response = Console.ReadKey(false).Key;
+    if(response != ConsoleKey.Enter)
+        Console.WriteLine();
+
+} while(response != ConsoleKey.Y && response != ConsoleKey.N);
+
+bool onlyLocalCompanies = false;
+
+onlyLocalCompanies = response == ConsoleKey.Y;
+
 int pageNumber = 1;
 bool nextExists = true;
 
 List<List<string>> pageLists = new List<List<string>>();
 
-while (nextExists)
+while (nextExists | pageNumber < 100)
 {
     HtmlWeb web = new HtmlWeb();
     var companiesListPage =
@@ -24,7 +39,7 @@ while (nextExists)
     if (nextExists)
     {
         Console.WriteLine($"Processing page: {pageNumber}");
-        ProcessPage(companiesListPage?.DocumentNode.SelectNodes("//h2/a[@target='_blank']"), ref pageLists);
+        ProcessPage(companiesListPage?.DocumentNode.SelectNodes("//h2/a[@target='_blank']"), ref pageLists, onlyLocalCompanies);
         Console.WriteLine($"Finished page: {pageNumber}");
     }
     pageNumber++;
@@ -53,7 +68,7 @@ static void WriteToExcel(string filePath, ref List<List<string>> pageLists)
     }
 }
 
-static void ProcessPage(HtmlNodeCollection? nodes, ref List<List<string>> pageLists)
+static void ProcessPage(HtmlNodeCollection? nodes, ref List<List<string>> pageLists, bool onlyLocalCompanies)
 {
     try
     {
@@ -67,13 +82,22 @@ static void ProcessPage(HtmlNodeCollection? nodes, ref List<List<string>> pageLi
             HtmlWeb web = new HtmlWeb();
             var businessPage = web.Load(basePage + url);
 
-            var businessPageNodes = businessPage.DocumentNode.SelectNodes(@"//div[@class='media-body']//a[@target='_blank']");
-            if (businessPageNodes == null)
+            var businessPageNodes =  businessPage.DocumentNode.SelectNodes(@"//div[@class='media-body']//a[@target='_blank']");
+
+            bool filtersFail = false;
+
+            if(onlyLocalCompanies)
+                filtersFail = !IsLocalCompany(businessPage.DocumentNode);
+
+            if (businessPageNodes == null || filtersFail)
             {
                 continue;
             }
 
-            var singleCompanyList = new List<string> { companyTitle };
+            var companyAddress = GetCompanyAddress(businessPage.DocumentNode);
+
+
+            var singleCompanyList = new List<string> { companyTitle, companyAddress };
             foreach (var n in businessPageNodes)
             {
                 var value = n.Attributes["href"].Value
@@ -90,6 +114,22 @@ static void ProcessPage(HtmlNodeCollection? nodes, ref List<List<string>> pageLi
     {
         Console.WriteLine(e.Message);
     }
+}
+
+static string GetCompanyAddress(HtmlNode node)
+{
+    return string.Join(' ', node.SelectNodes(@"//div[@class='media-body'][1]//strong//following-sibling::text()[position() < last()]")
+                .Select(x => x.InnerText).ToList());
+            
+}
+
+static bool IsLocalCompany(HtmlNode node)
+{
+    var cityName = node.SelectSingleNode(@"//div[@class='media-body'][1]//strong//following-sibling::text()[2]").InnerText;
+
+    if(cityName.Trim().ToLower().StartsWith("скопје"))
+        return true;
+    return false;
 }
 
 static void NormalizeColumnSize(ISheet sheet)
