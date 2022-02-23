@@ -9,7 +9,13 @@ Console.InputEncoding = System.Text.Encoding.Unicode;
 Console.OutputEncoding = System.Text.Encoding.Unicode;
 Console.Write("Enter a valid file path [ex: c:/users/test/desktop/test.xlsx]:");
 
-string filePath = Console.ReadLine().Trim().Replace("/", @"\");
+string filePath;
+filePath = Console.ReadLine().Trim().Replace("/", @"\");
+if(filePath == string.Empty)
+{
+    filePath = $"{Directory.GetCurrentDirectory()}/{Environment.UserName}CompaniesList.xlsx ";
+}
+
 Console.WriteLine("Enter a city to filter by [ex: скопје,прилеп][leave it empty for all]: ");
 var citySearchTerms = Console.ReadLine().Replace(" ", "").Split(',');
 
@@ -18,7 +24,7 @@ bool nextExists = true;
 
 List<List<string>> pageLists = new List<List<string>>();
 
-while (nextExists && pageNumber < 2)
+while (nextExists && pageNumber < 100)
 {
     HtmlWeb web = new HtmlWeb();
     var companiesListPage =
