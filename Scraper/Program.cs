@@ -6,18 +6,19 @@ using NPOI.XSSF.UserModel;
 const string basePage = @"https://clubeconomy.com.mk";
 
 Console.InputEncoding = System.Text.Encoding.Unicode;
+Console.OutputEncoding = System.Text.Encoding.Unicode;
 Console.Write("Enter a valid file path [ex: c:/users/test/desktop/test.xlsx]:");
 
 string filePath = Console.ReadLine().Trim().Replace("/", @"\");
-Console.WriteLine("Enter a city to filter by: ");
-var citySearchTerms = Console.ReadLine().Split(',');
+Console.WriteLine("Enter a city to filter by [ex: скопје,прилеп][leave it empty for all]: ");
+var citySearchTerms = Console.ReadLine().Replace(" ", "").Split(',');
 
 int pageNumber = 1;
 bool nextExists = true;
 
 List<List<string>> pageLists = new List<List<string>>();
 
-while (nextExists && pageNumber < 100)
+while (nextExists && pageNumber < 2)
 {
     HtmlWeb web = new HtmlWeb();
     var companiesListPage =
@@ -112,7 +113,7 @@ static bool IsInCity(HtmlNode node, string[] cities)
 {
     var cityName = node.SelectSingleNode(@"//div[@class='media-body'][1]//strong//following-sibling::text()[2]").InnerText;
 
-    if(cities.Any(city => city.Trim().ToLower().StartsWith(cityName.Trim().ToLower())))
+    if(cities.Any(city => city.Trim().ToLower().StartsWith(cityName.Trim().ToLower())) || string.Empty == cities[0])
         return true;
     return false;
 }
