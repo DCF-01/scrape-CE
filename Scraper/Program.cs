@@ -17,7 +17,7 @@ bool nextExists = true;
 
 List<List<string>> pageLists = new List<List<string>>();
 
-while (nextExists || pageNumber < 100)
+while (nextExists && pageNumber < 100)
 {
     HtmlWeb web = new HtmlWeb();
     var companiesListPage =
@@ -112,7 +112,7 @@ static bool IsInCity(HtmlNode node, string[] cities)
 {
     var cityName = node.SelectSingleNode(@"//div[@class='media-body'][1]//strong//following-sibling::text()[2]").InnerText;
 
-    if(cities.Any(city => city.Trim().ToLower().StartsWith(cityName)))
+    if(cities.Any(city => city.Trim().ToLower().StartsWith(cityName.Trim().ToLower())))
         return true;
     return false;
 }
